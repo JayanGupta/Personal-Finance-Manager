@@ -1,0 +1,196 @@
+---
+title: "Personal Finance"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    social: [ "twitter", "facebook", "menu"]
+---
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(highcharter)
+library(gt)
+library(DT)
+library(htmltools)
+library(plotly)
+library(ggplot2)
+library(plyr)
+library(rpivotTable)
+library(lubridate)
+```
+
+
+```{r}
+# Import data
+library(readxl)
+df = read_csv("/content/personal-finance-dataxlsx---Sheet1.csv")
+```
+
+Personal Finance
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+
+### **Salary per Month**
+```{r}
+df_salary = df %>%
+  select(Category,`Debit/Credit`) %>%
+  filter(tolower(Category) == "salary")
+gauge(round(mean(df_salary$`Debit/Credit`),
+            digits = 2),
+      min = 0,
+      max = 100000,
+      gaugeSectors(colors = "yellow"))
+```
+
+### Total Allowences Get
+
+```{r}
+df_all = df %>%
+  select(Category,`Debit/Credit`) %>%
+  filter(tolower(Category) == "allowance")
+
+valueBox(sum(df_all$`Debit.Credit`),
+         icon = "fa-building")
+```
+
+### Others Income
+
+```{r}
+df_other = df %>%
+  select(Category,`Income/Expense`,`Debit/Credit`) %>%
+  filter(tolower(Category) == "other") %>%
+  filter(tolower(`Income/Expense`) == "income")
+
+valueBox(sum(df_other$`Debit/Credit`),
+         icon = "fa-building")
+
+```
+
+### Total Spending
+
+```{r}
+df_ = df %>%
+  select(Category,`Income/Expense`,`Debit/Credit`) %>%
+  filter(tolower(`Income/Expense`) != "income")
+valueBox(sum(df_$`Debit/Credit`),
+         icon = "fa-building")
+```
+
+### Total Savings
+
+```{r}
+df_ = df %>%
+  select(Category,`Income/Expense`,`Debit/Credit`) %>%
+  filter(tolower(`Income/Expense`) != "income")
+df_salary = df %>%
+  select(Category,`Income/Expense`,`Debit/Credit`) %>%
+  filter(tolower(`Income/Expense`) == "income")
+valueBox(sum(df_salary$`Debit/Credit`) - sum(df_$`Debit/Credit`),
+         icon = "fa-building")
+```
+
+
+Row
+-----------------------------------------------------------
+
+### **Most Frequently Spending On A Category**
+
+```{r}
+df_ = df %>%
+  select(Category, `Income/Expense`, `Debit/Credit`) %>%
+  filter(tolower(`Income/Expense`) != "income")
+df_$Category = tolower(df_$Category)
+bar = ggplot(data= df_) +
+  geom_bar(aes(x = Category, fill = Category)) +
+  guides(fill = F)
+ggplotly(bar)
+
+```
+
+### **Monthly Spending On Each Category**
+
+```{r}
+df_date = df %>%
+  select(`Date / Time`, Category, `Income/Expense`, `Debit/Credit`) %>%
+  mutate(`Date / Time` = mdy(`Date / Time`)) %>%   
+  filter(tolower(`Income/Expense`) != "income")
+
+df_date$Category = tolower(df_date$Category)
+
+l1 = ggplot(df_date, aes(x = `Date / Time`, y = `Debit/Credit`, color = Category)) +
+  geom_line() +
+  labs(x = "Date", y = "Debit/Credit", color = "Category")
+ggplotly(l1)
+
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Maximum Expense
+
+```{r}
+df_date = df %>%
+  select(`Date / Time`, Category, `Income/Expense`, `Debit/Credit`) %>%
+  mutate(`Date / Time` = mdy(`Date / Time`)) %>%   
+  filter(tolower(`Income/Expense`) != "income")
+
+df_date$Category = tolower(df_date$Category)
+valueBox(max(df_date$`Debit/Credit`), icon = "fa-user")
+```
+
+### Average Expense
+
+```{r}
+df_date = df %>%
+  select(`Date / Time`, Category, `Income/Expense`, `Debit/Credit`) %>%
+  mutate(`Date / Time` = mdy(`Date / Time`)) %>%   
+  filter(tolower(`Income/Expense`) != "income")
+
+df_date$Category = tolower(df_date$Category)
+valueBox(round(mean(df_date$`Debit/Credit`), 2), icon = "fa-user")
+```
+
+### Minimum Expense
+
+```{r}
+df_date = df %>%
+  select(`Date / Time`, Category, `Income/Expense`, `Debit/Credit`) %>%
+  mutate(`Date / Time` = mdy(`Date / Time`)) %>%  
+  filter(tolower(`Income/Expense`) != "income")
+
+df_date$Category = tolower(df_date$Category)
+valueBox(min(df_date$`Debit/Credit`), icon = "fa-user")
+```
+Table Spending In Each Category
+==========================================================
+
+```{r}
+df_11 = df %>%
+  select(`Date / Time`, Category, `Income/Expense`, `Debit/Credit`) %>%
+  mutate(`Date / Time` = mdy(`Date / Time`)) %>%   
+  filter(tolower(`Income/Expense`) != "income")
+
+df_11$Category = tolower(df_11$Category)
+
+rpivotTable(df_11,
+            aggregatorName = "sum",
+            cols= "`Debit/Credit`",
+            rows = "Category" ,
+            rendererName = "Table Barchart")
+
+```
+
+Data Table
+=============================================================
+
+```{r}
+datatable(df,
+          caption = "Personal Finance Data",
+          rownames = T,
+          filter = "top",
+          options = list(pageLength = 25))
+```
